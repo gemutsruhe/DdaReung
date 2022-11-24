@@ -3,7 +3,7 @@ package com.example.bikemap;
 import com.google.android.gms.maps.model.LatLng;
 
 public class Position implements Comparable<Position> {
-    LatLng latlng;
+    private final LatLng latlng;
     private double ele;
 
     Position (double lat, double lon) {
@@ -54,14 +54,31 @@ public class Position implements Comparable<Position> {
         } else return false;
     }
 
-    public double getDistance(LatLng latlng) { // 두 Position의 Lat, Lon을 사용하여 두 점 사이의 거리를 계싼
+    public static double getDistance(LatLng latlng1, LatLng latlng2) { // 두 Position의 Lat, Lon을 사용하여 두 점 사이의 거리를 계싼
 
-        if ((this.latlng.latitude == latlng.latitude) && (this.latlng.longitude == latlng.longitude)) {
+        if ((latlng1.latitude == latlng2.latitude) && (latlng1.longitude == latlng2.longitude)) {
             return 0;
         }
         else {
-            double theta = this.latlng.longitude - latlng.longitude;
-            double dist = Math.sin(Math.toRadians(this.latlng.latitude)) * Math.sin(Math.toRadians(latlng.latitude)) + Math.cos(Math.toRadians(this.latlng.latitude)) * Math.cos(Math.toRadians(latlng.latitude)) * Math.cos(Math.toRadians(theta));
+            double theta = latlng1.longitude - latlng2.longitude;
+            double dist = Math.sin(Math.toRadians(latlng1.latitude)) * Math.sin(Math.toRadians(latlng2.latitude)) + Math.cos(Math.toRadians(latlng1.latitude)) * Math.cos(Math.toRadians(latlng2.latitude)) * Math.cos(Math.toRadians(theta));
+            dist = Math.acos(dist);
+            dist = Math.toDegrees(dist);
+            dist = dist * 60 * 1.1515;
+            dist = dist * 1609.344;
+
+            return dist;
+        }
+    }
+
+    public static double getDistance(Position pos1, Position pos2) {
+        LatLng latlng1 = pos1.getLatLng(), latlng2 = pos2.getLatLng();
+        if ((latlng1.latitude == latlng2.latitude) && (latlng1.longitude == latlng2.longitude)) {
+            return 0;
+        }
+        else {
+            double theta = latlng1.longitude - latlng2.longitude;
+            double dist = Math.sin(Math.toRadians(latlng1.latitude)) * Math.sin(Math.toRadians(latlng2.latitude)) + Math.cos(Math.toRadians(latlng1.latitude)) * Math.cos(Math.toRadians(latlng2.latitude)) * Math.cos(Math.toRadians(theta));
             dist = Math.acos(dist);
             dist = Math.toDegrees(dist);
             dist = dist * 60 * 1.1515;

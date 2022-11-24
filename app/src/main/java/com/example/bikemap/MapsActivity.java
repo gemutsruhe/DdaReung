@@ -1,11 +1,15 @@
 package com.example.bikemap;
 
+import androidx.annotation.RequiresPermission;
+import androidx.core.content.ContextCompat;
 import androidx.fragment.app.FragmentActivity;
 
 import android.app.Activity;
 import android.content.Context;
 import android.graphics.Bitmap;
 import android.graphics.Canvas;
+import android.graphics.Color;
+import android.location.LocationManager;
 import android.os.Bundle;
 import android.util.DisplayMetrics;
 import android.view.LayoutInflater;
@@ -17,11 +21,11 @@ import com.google.android.gms.maps.CameraUpdateFactory;
 import com.google.android.gms.maps.GoogleMap;
 import com.google.android.gms.maps.OnMapReadyCallback;
 import com.google.android.gms.maps.SupportMapFragment;
-import com.google.android.gms.maps.model.BitmapDescriptor;
 import com.google.android.gms.maps.model.BitmapDescriptorFactory;
 import com.google.android.gms.maps.model.LatLng;
 import com.google.android.gms.maps.model.MarkerOptions;
 import com.example.bikemap.databinding.ActivityMapsBinding;
+import com.google.android.gms.maps.model.PolylineOptions;
 
 import java.util.ArrayList;
 import java.util.concurrent.atomic.AtomicReference;
@@ -31,6 +35,7 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
     private GoogleMap mMap;
     private ActivityMapsBinding binding;
     private ArrayList<Station> stationState;
+    private ArrayList<Position> crossRoadList;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -56,6 +61,9 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
 
         stationState = atomicStationState.get();
 
+        DBHelper dbHelper = new DBHelper(MapsActivity.this, 1);
+        crossRoadList = dbHelper.getCrossRoadList();
+
         // Obtain the SupportMapFragment and get notified when the map is ready to be used.
         SupportMapFragment mapFragment = (SupportMapFragment) getSupportFragmentManager()
                 .findFragmentById(R.id.map);
@@ -65,10 +73,13 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
     @Override
     public void onMapReady(GoogleMap googleMap) {
         mMap = googleMap;
-        LatLng pos = new LatLng(37.5666805, 126.9784147);
-        mMap.moveCamera(CameraUpdateFactory.newLatLngZoom(pos, 16));
+        LatLng pos = new LatLng(37.503064, 126.947617);
+        mMap.moveCamera(CameraUpdateFactory.newLatLngZoom(pos, 14));
 
         drawStation(pos);
+
+        drawRoute(new LatLng(37.503064, 126.947617), new LatLng(37.480963, 126.953154), crossRoadList);
+        //drawRoute(new LatLng(37.480963, 126.953154), new LatLng(37.503064, 126.947617), crossRoadList);
     }
 
     private void drawStation(LatLng pos){
@@ -84,8 +95,48 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
             LatLng coord = stationPos.getLatLng();
 
             MarkerOptions markerOptions = new MarkerOptions().position(coord).title(station.getStationName()).zIndex(station.getParkingNum());
-            tv_marker.setText(Integer.toString(station.getParkingNum()));
+            tv_marker.setText(station.getParkingNum());
             mMap.addMarker(markerOptions.icon(BitmapDescriptorFactory.fromBitmap(createDrawableFromView(this, marker_root_view))));
+        }
+    }
+
+    private void drawRoute(LatLng start, LatLng end, ArrayList<Position> crossRoadList){
+        AtomicReference<ArrayList<Direction>> atomicRoute = new AtomicReference<>();
+        Thread getRoute = new Thread(){
+            public void run(){
+                ArrayList<Direction> route = Direction.getRoute(start, end, crossRoadList);
+                atomicRoute.set(route);
+            }
+        };
+        getRoute.start();
+        try {
+            getRoute.join();
+        } catch (InterruptedException e) {
+            e.printStackTrace();
+        }
+
+        ArrayList<Direction> route = atomicRoute.get();
+        for(int i = 0; i < route.size(); i++) {
+
+            PolylineOptions polyline = new PolylineOptions();
+
+            ArrayList<Position> direction = route.get(i).getRouteList();
+
+            for(int j = 0; j < direction.size() - 1; j++) {
+                LatLng latlng1 = direction.get(j).getLatLng();
+                LatLng latlng2 = direction.get(j + 1).getLatLng();
+                double dist = Position.getDistance(latlng1, latlng2);
+                double radian = Math.atan((direction.get(j + 1).getEle() - direction.get(j).getEle()) / dist);
+                double degree = Math.toDegrees(radian);
+
+                if(degree >= 15) {
+                    mMap.addPolyline(new PolylineOptions().add(latlng1, latlng2).color(Color.RED));
+                } else if(degree >= 5){
+                    mMap.addPolyline(new PolylineOptions().add(latlng1, latlng2).color(Color.YELLOW));
+                } else {
+                    mMap.addPolyline(new PolylineOptions().add(latlng1, latlng2).color(Color.GREEN));
+                }
+            }
         }
     }
 
@@ -102,5 +153,10 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
         view.draw(canvas);
 
         return bitmap;
+    }
+
+    public void drawPolyline(){
+
+
     }
 }
