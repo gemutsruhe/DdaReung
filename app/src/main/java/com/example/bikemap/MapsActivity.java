@@ -1,5 +1,6 @@
 package com.example.bikemap;
 
+import androidx.annotation.NonNull;
 import androidx.annotation.RequiresPermission;
 import androidx.core.content.ContextCompat;
 import androidx.fragment.app.FragmentActivity;
@@ -25,6 +26,7 @@ import com.google.android.gms.maps.model.BitmapDescriptorFactory;
 import com.google.android.gms.maps.model.LatLng;
 import com.google.android.gms.maps.model.MarkerOptions;
 import com.example.bikemap.databinding.ActivityMapsBinding;
+import com.google.android.gms.maps.model.Polyline;
 import com.google.android.gms.maps.model.PolylineOptions;
 
 import java.util.ArrayList;
@@ -36,6 +38,9 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
     private ActivityMapsBinding binding;
     private ArrayList<Station> stationState;
     private ArrayList<Position> crossRoadList;
+
+    ArrayList<ArrayList<Polyline>> routePolyline;
+    int selected;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -64,6 +69,14 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
         DBHelper dbHelper = new DBHelper(MapsActivity.this, 1);
         crossRoadList = dbHelper.getCrossRoadList();
 
+        Thread getPOI = new Thread(){
+            public void run(){
+                DataProcess.getPOI("중앙대학교");
+            }
+        };
+        getPOI.start();
+        selected = -1;
+
         // Obtain the SupportMapFragment and get notified when the map is ready to be used.
         SupportMapFragment mapFragment = (SupportMapFragment) getSupportFragmentManager()
                 .findFragmentById(R.id.map);
@@ -75,10 +88,12 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
         mMap = googleMap;
         LatLng pos = new LatLng(37.503064, 126.947617);
         mMap.moveCamera(CameraUpdateFactory.newLatLngZoom(pos, 14));
-
+        mMap.setMinZoomPreference(14);
+        mMap.setMaxZoomPreference(17);
+// 14 ~ 17
         drawStation(pos);
 
-        drawRoute(new LatLng(37.503064, 126.947617), new LatLng(37.480963, 126.953154), crossRoadList);
+        drawRoute(new LatLng(37.504960, 126.953850), new LatLng(37.508841, 126.928875), crossRoadList);
         //drawRoute(new LatLng(37.480963, 126.953154), new LatLng(37.503064, 126.947617), crossRoadList);
     }
 
@@ -95,12 +110,13 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
             LatLng coord = stationPos.getLatLng();
 
             MarkerOptions markerOptions = new MarkerOptions().position(coord).title(station.getStationName()).zIndex(station.getParkingNum());
-            tv_marker.setText(station.getParkingNum());
+            tv_marker.setText(Integer.toString(station.getParkingNum()));
             mMap.addMarker(markerOptions.icon(BitmapDescriptorFactory.fromBitmap(createDrawableFromView(this, marker_root_view))));
         }
     }
 
     private void drawRoute(LatLng start, LatLng end, ArrayList<Position> crossRoadList){
+        routePolyline = new ArrayList<>();
         AtomicReference<ArrayList<Direction>> atomicRoute = new AtomicReference<>();
         Thread getRoute = new Thread(){
             public void run(){
@@ -115,9 +131,23 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
             e.printStackTrace();
         }
 
+        mMap.setOnPolylineClickListener(new GoogleMap.OnPolylineClickListener(){
+            @Override
+            public void onPolylineClick(Polyline polyline) {
+                if(selected == -1) {
+                    selectRoute((int) polyline.getZIndex());
+                    selected = (int) polyline.getZIndex();
+                }
+                else {
+                    unselectRoute();
+                    selected = -1;
+                }
+            }
+        });
+
         ArrayList<Direction> route = atomicRoute.get();
         for(int i = 0; i < route.size(); i++) {
-
+            routePolyline.add(new ArrayList<>());
             PolylineOptions polyline = new PolylineOptions();
 
             ArrayList<Position> direction = route.get(i).getRouteList();
@@ -130,12 +160,13 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
                 double degree = Math.toDegrees(radian);
 
                 if(degree >= 15) {
-                    mMap.addPolyline(new PolylineOptions().add(latlng1, latlng2).color(Color.RED));
+                    routePolyline.get(i).add(mMap.addPolyline(new PolylineOptions().add(latlng1, latlng2).color(Color.RED).zIndex(i)));
                 } else if(degree >= 5){
-                    mMap.addPolyline(new PolylineOptions().add(latlng1, latlng2).color(Color.YELLOW));
+                    routePolyline.get(i).add(mMap.addPolyline(new PolylineOptions().add(latlng1, latlng2).color(Color.YELLOW).zIndex(i)));
                 } else {
-                    mMap.addPolyline(new PolylineOptions().add(latlng1, latlng2).color(Color.GREEN));
+                    routePolyline.get(i).add(mMap.addPolyline(new PolylineOptions().add(latlng1, latlng2).color(Color.GREEN).zIndex(i)));
                 }
+                routePolyline.get(i).get(j).setClickable(true);
             }
         }
     }
@@ -155,8 +186,24 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
         return bitmap;
     }
 
-    public void drawPolyline(){
+    private void selectRoute(int zIndex){
+        for(int i = 0; i < routePolyline.size(); i++) {
+            if(zIndex == i) continue;
 
+            ArrayList<Polyline> directionPolyline = routePolyline.get(i);
 
+            for(int j = 0; j < directionPolyline.size(); j++) {
+                directionPolyline.get(j).setVisible(false);
+            }
+        }
+    }
+
+    private void unselectRoute() {
+        for(int i = 0; i < routePolyline.size(); i++) {
+            ArrayList<Polyline> directionPolyline = routePolyline.get(i);
+            for(int j = 0; j < directionPolyline.size(); j++) {
+                directionPolyline.get(j).setVisible(true);
+            }
+        }
     }
 }

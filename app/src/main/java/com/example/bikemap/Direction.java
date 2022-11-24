@@ -44,7 +44,7 @@ public class Direction {
         for(int i = 0; i < crossRoadList.size(); i++) {
             Position waypointPos = crossRoadList.get(i);
             LatLng waypoint = waypointPos.getLatLng();
-            if((Position.getDistance(start, end) * 1.2 >= Position.getDistance(start, waypoint) + Position.getDistance(end, waypoint)) && Math.min(Position.getDistance(start, waypoint), Position.getDistance(end, waypoint)) * 1.2 >= Math.max(Position.getDistance(start, waypoint), Position.getDistance(end, waypoint))) {
+            if((Position.getDistance(start, end) * 1.3 >= Position.getDistance(start, waypoint) + Position.getDistance(end, waypoint)) && Math.min(Position.getDistance(start, waypoint), Position.getDistance(end, waypoint)) * 1.5 >= Math.max(Position.getDistance(start, waypoint), Position.getDistance(end, waypoint))) {
 
                 ArrayList<Position> posList = getDirection(start, waypoint, end);
 
@@ -78,7 +78,7 @@ public class Direction {
 
                 route1.retainAll(route2);
 
-                if((double)route1.size() / route1Size >= 0.9 || (double)route1.size() / route2Size >= 0.9) {
+                if((double)route1.size() / route1Size >= 0.5 || (double)route1.size() / route2Size >= 0.5) {
                     if(route.get(i).getWeight() > route.get(j).getWeight()) {
                         route.remove(i);
                         i--;
