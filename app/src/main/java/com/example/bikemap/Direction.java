@@ -14,11 +14,13 @@ import java.io.OutputStreamWriter;
 import java.net.HttpURLConnection;
 import java.net.URL;
 import java.util.ArrayList;
+import java.util.concurrent.atomic.AtomicReference;
 
 public class Direction {
     private ArrayList<Position> pointPos;
     private ArrayList<Position> route;
     private double weight;
+    public static ArrayList<Position> crossRoadList;
 
     Direction(ArrayList<Position> pointPos, ArrayList<Position> route, double weight){
         this.pointPos = pointPos;
@@ -38,16 +40,26 @@ public class Direction {
         return weight;
     }
 
-    public static ArrayList<Direction> getRoute(LatLng start, LatLng end, ArrayList<Position> crossRoadList) {
+    public static ArrayList<Direction> getRoute(LatLng start, LatLng end) {
         ArrayList<Direction> route = new ArrayList<>();
 
         for(int i = 0; i < crossRoadList.size(); i++) {
             Position waypointPos = crossRoadList.get(i);
             LatLng waypoint = waypointPos.getLatLng();
             if((Position.getDistance(start, end) * 1.3 >= Position.getDistance(start, waypoint) + Position.getDistance(end, waypoint)) && Math.min(Position.getDistance(start, waypoint), Position.getDistance(end, waypoint)) * 1.5 >= Math.max(Position.getDistance(start, waypoint), Position.getDistance(end, waypoint))) {
-
-                ArrayList<Position> posList = getDirection(start, waypoint, end);
-
+                AtomicReference<ArrayList<Position>> atomicPosList = new AtomicReference<>();
+                Thread getPosList = new Thread() {
+                    public void run(){
+                        atomicPosList.set(getDirection(start, waypoint, end));
+                    }
+                };
+                getPosList.start();
+                try {
+                    getPosList.join();
+                } catch (InterruptedException e) {
+                    e.printStackTrace();
+                }
+                ArrayList<Position> posList = atomicPosList.get();
                 ArrayList<Position> dividePosList = divideInterval(posList);
                 Thread thread = new Thread() {
                     public void run(){
@@ -67,6 +79,19 @@ public class Direction {
             }
         }
 
+        double minWeight = Double.MAX_VALUE;
+
+        for(int i = 0; i < route.size(); i++) {
+            minWeight = Math.min(route.get(i).getWeight(), minWeight);
+        }
+
+        for(int i = 0; i < route.size(); i++) {
+            if(minWeight * 1.3 < route.get(i).getWeight()) {
+                route.remove(i);
+                i--;
+            }
+        }
+
         for(int i = 0; i < route.size() - 1; i++) {
             for(int j = i + 1; j < route.size(); j++) {
 
@@ -78,10 +103,11 @@ public class Direction {
 
                 route1.retainAll(route2);
 
-                if((double)route1.size() / route1Size >= 0.5 || (double)route1.size() / route2Size >= 0.5) {
+                if((double)route1.size() / route1Size >= 0.8 || (double)route1.size() / route2Size >= 0.8) {
                     if(route.get(i).getWeight() > route.get(j).getWeight()) {
                         route.remove(i);
                         i--;
+                        j--;
                         break;
                     } else {
                         route.remove(j);
@@ -99,7 +125,7 @@ public class Direction {
         ArrayList<Position> posList = new ArrayList<>();
 
         String coord = "[[" + start.longitude + "," + start.latitude + "],[" + waypoint.longitude + "," + waypoint.latitude + "],[" + end.longitude + "," + end.latitude + "]]";
-        StringBuilder urlBuilder = new StringBuilder("https://api.openrouteservice.org/v2/directions/cycling-road?Authorization=5b3ce3597851110001cf6248588bd0d801724a5f850d4ecb744064e4");
+        StringBuilder urlBuilder = new StringBuilder("https://api.openrouteservice.org/v2/directions/cycling-regular?Authorization=5b3ce3597851110001cf6248588bd0d801724a5f850d4ecb744064e4");
         URL url;
 
         try {
@@ -137,6 +163,7 @@ public class Direction {
             }
             JSONArray routes = (JSONArray) jsonObject.get("routes");
             JSONObject objectTemp = (JSONObject)routes.get(0);
+            JSONObject summary = (JSONObject)objectTemp.get("summary");
             String geometry = objectTemp.get("geometry").toString();
             JSONArray decodedGeometry = decodeGeometry(geometry, false);
 
