@@ -1,0 +1,47 @@
+{
+  "project_info": {
+    "project_number": "648464596955",
+    "project_id": "ddareung-42c1a",
+    "storage_bucket": "ddareung-42c1a.appspot.com"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:648464596955:android:7213584b356c013accb1fe",
+        "android_client_info": {
+          "package_name": "com.example.bikemap"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "648464596955-er2s6idbmjnk65mm8vsp1lqbjtcjamee.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.example.bikemap",
+            "certificate_hash": "059743ccaa935b38b704ec82c14e738f4fad2ca6"
+          }
+        },
+        {
+          "client_id": "648464596955-i3a23t3tukdind5n671ng8posavfdaf5.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyAo7G8sv05JKNMIRx5_kxviF4PEXTrWXow"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "648464596955-i3a23t3tukdind5n671ng8posavfdaf5.apps.googleusercontent.com",
+              "client_type": 3
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
