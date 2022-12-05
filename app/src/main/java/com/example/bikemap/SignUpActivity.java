@@ -13,6 +13,11 @@ import com.google.android.gms.tasks.OnCompleteListener;
 import com.google.android.gms.tasks.Task;
 import com.google.firebase.auth.AuthResult;
 import com.google.firebase.auth.FirebaseAuth;
+import com.google.firebase.database.DatabaseReference;
+import com.google.firebase.database.FirebaseDatabase;
+
+import java.util.HashMap;
+import java.util.Map;
 
 public class SignUpActivity extends AppCompatActivity {
     private FirebaseAuth firebaseAuth;
@@ -55,6 +60,14 @@ public class SignUpActivity extends AppCompatActivity {
                 if (task.isSuccessful()) {
                     // 회원가입 성공시
                     Toast.makeText(SignUpActivity.this, "회원가입 성공", Toast.LENGTH_SHORT).show();
+                    DatabaseReference mPostReference = FirebaseDatabase.getInstance().getReference();
+                    Map<String, Object> childUpdates = new HashMap<>();
+                    Map<String, Object> postValues = null;
+
+                    FirebasePost post = new FirebasePost(editTextEmail.getText().toString(), "name", "phonNumber");
+                    postValues = post.toMap();
+                    childUpdates.put("/id_list/" + editTextEmail.getText().toString(), postValues);
+                    mPostReference.updateChildren(childUpdates);
                     finish();
                 } else {
                     // 계정이 중복된 경우
