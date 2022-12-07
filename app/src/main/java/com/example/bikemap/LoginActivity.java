@@ -48,7 +48,9 @@ public class LoginActivity extends AppCompatActivity {
         String userPw = auto.getString("userPw", null);
 
         if(userId != null && userPw != null){
-            login(userId, userPw); // 로그인 로직
+            logViewEmail.setText(userId);
+            logViewPw.setText(userPw);
+            login(userId, userPw);
         }else{
             doLoginBtn.setOnClickListener(new View.OnClickListener(){
 
@@ -71,14 +73,18 @@ public class LoginActivity extends AppCompatActivity {
                             // Sign in success, update UI with the signed-in user's information
                             if(autoLogin.isChecked()) {
                                 SharedPreferences auto = getSharedPreferences("autoLogin", Activity.MODE_PRIVATE);
-                                SharedPreferences.Editor autoLoginEdit = auto.edit();
-                                autoLoginEdit.putString("userEmail", inputEmail);
-                                autoLoginEdit.putString("userPw", inputPw);
-                                autoLoginEdit.commit();
+                                SharedPreferences.Editor loginEdit = auto.edit();
+                                loginEdit.putString("userEmail", inputEmail);
+                                loginEdit.putString("userPw", inputPw);
+                                loginEdit.commit();
                             }
                             FirebaseUser user = mAuth.getCurrentUser();
-                            Intent intent = new Intent(LoginActivity.this, MainActivity.class);
-                            intent.putExtra("uid", user);
+                            System.out.println("TEST : " + user.getUid());
+                            SharedPreferences uid = getSharedPreferences("uid", Activity.MODE_PRIVATE);
+                            SharedPreferences.Editor uidEdit = uid.edit();
+                            uidEdit.putString("uid", user.getUid());
+                            uidEdit.commit();
+                            Intent intent = new Intent(LoginActivity.this, MapsActivity.class);
                             startActivity(intent);
                             finish();
                             Toast.makeText(LoginActivity.this, "로그인에 성공하셨습니다.", Toast.LENGTH_SHORT).show();

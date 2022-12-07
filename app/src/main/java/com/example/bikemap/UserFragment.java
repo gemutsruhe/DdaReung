@@ -1,9 +1,11 @@
 package com.example.bikemap;
 
+import android.content.Intent;
 import android.os.Bundle;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
+import android.widget.Button;
 import android.widget.TextView;
 
 import androidx.annotation.NonNull;
@@ -65,6 +67,8 @@ public class UserFragment extends Fragment {
             mParam1 = getArguments().getString(ARG_PARAM1);
             mParam2 = getArguments().getString(ARG_PARAM2);
         }
+
+
     }
 
     @Override
@@ -82,6 +86,8 @@ public class UserFragment extends Fragment {
         TextView nickname_tv = (TextView) v.findViewById(R.id.nickname_tv);
         TextView pNum_tv = (TextView)v.findViewById(R.id.phoneNum_tv);
 
+        Button setting_tilt = (Button)v.findViewById(R.id.tilt_button);
+
         mDatabase.child("users").child(uid).addValueEventListener(new ValueEventListener() {
             @Override
             public void onDataChange(@NonNull DataSnapshot dataSnapshot) {
@@ -97,6 +103,13 @@ public class UserFragment extends Fragment {
             @Override
             public void onCancelled(@NonNull DatabaseError databaseError) {
                 // Getting Post failed, log a message
+            }
+        });
+
+        setting_tilt.setOnClickListener(new View.OnClickListener() {
+
+            @Override
+            public void onClick(View view) {
             }
         });
 

@@ -32,7 +32,8 @@
             android:layout_width="300dp"
             android:layout_height="wrap_content"
             android:layout_gravity="center"
-            android:hint="아이디"></EditText>
+            android:hint="아이디"
+            android:singleLine="true"></EditText>
 
         <EditText
             android:id ="@+id/login_view_pw"
@@ -41,7 +42,8 @@
             android:layout_gravity="center"
             android:layout_marginTop="20dp"
             android:hint="비밀번호"
-            android:inputType="textPassword"></EditText>
+            android:inputType="textPassword"
+            android:singleLine="true"></EditText>
 
         <CheckBox
             android:id ="@+id/auto_login_checkbox"

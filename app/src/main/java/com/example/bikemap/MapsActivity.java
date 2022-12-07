@@ -1,13 +1,21 @@
 package com.example.bikemap;
 
+import androidx.activity.result.ActivityResultLauncher;
+import androidx.activity.result.contract.ActivityResultContracts;
 import androidx.annotation.NonNull;
+import androidx.core.app.ActivityCompat;
 import androidx.fragment.app.FragmentActivity;
 
+import android.Manifest;
 import android.app.Activity;
 import android.content.Context;
+import android.content.SharedPreferences;
+import android.content.pm.PackageManager;
 import android.graphics.Bitmap;
 import android.graphics.Canvas;
 import android.graphics.Color;
+import android.location.Location;
+import android.location.LocationManager;
 import android.os.Bundle;
 import android.util.DisplayMetrics;
 import android.view.LayoutInflater;
@@ -26,6 +34,11 @@ import com.google.android.gms.maps.model.MarkerOptions;
 import com.example.bikemap.databinding.ActivityMapsBinding;
 import com.google.android.gms.maps.model.Polyline;
 import com.google.android.gms.maps.model.PolylineOptions;
+import com.google.firebase.database.DataSnapshot;
+import com.google.firebase.database.DatabaseError;
+import com.google.firebase.database.DatabaseReference;
+import com.google.firebase.database.FirebaseDatabase;
+import com.google.firebase.database.ValueEventListener;
 
 import java.util.ArrayList;
 import java.util.concurrent.atomic.AtomicReference;
@@ -41,6 +54,9 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
     Marker startMarker;
     Marker endMarker;
 
+    double redSlopeMin;
+    double yellowSlopeMin;
+
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
@@ -49,14 +65,42 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
         setContentView(binding.getRoot());
 
         AtomicReference<ArrayList<Station>> atomicStationState = new AtomicReference<>();
-        Thread getStationData = new Thread(){
-            public void run(){
+        Thread getStationData = new Thread() {
+            public void run() {
                 ArrayList<Station> station = DataProcess.getStationState();
                 atomicStationState.set(station);
             }
         };
 
         getStationData.start();
+
+        SharedPreferences current_uid = getSharedPreferences("uid", Activity.MODE_PRIVATE);
+        String uid = current_uid.getString("uid", null);
+
+        DatabaseReference databaseReference = FirebaseDatabase.getInstance().getReference();
+        databaseReference.child("user").child(uid).child("YellowSlopeMinimum").addValueEventListener(new ValueEventListener() {
+            @Override
+            public void onDataChange(@NonNull DataSnapshot snapshot) {
+                yellowSlopeMin = snapshot.getValue(Double.class);
+            }
+
+            @Override
+            public void onCancelled(@NonNull DatabaseError error) {
+
+            }
+        });
+        databaseReference.child("user").child(uid).child("RedSlopeMinimum").addValueEventListener(new ValueEventListener() {
+            @Override
+            public void onDataChange(@NonNull DataSnapshot snapshot) {
+                redSlopeMin = snapshot.getValue(Double.class);
+            }
+
+            @Override
+            public void onCancelled(@NonNull DatabaseError error) {
+
+            }
+        });
+
         try {
             getStationData.join();
         } catch (InterruptedException e) {
@@ -68,15 +112,14 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
         DBHelper dbHelper = new DBHelper(MapsActivity.this, 1);
         Direction.crossRoadList = dbHelper.getCrossRoadList();
 
-        /*
-        Thread getPOI = new Thread(){
+        /*Thread getPOI = new Thread(){
             public void run(){
                 DataProcess.getPOI("중앙대학교");
             }
         };
         getPOI.start();*/
-        selected = -1;
 
+        selected = -1;
         startMarker = null;
         endMarker = null;
         // Obtain the SupportMapFragment and get notified when the map is ready to be used.
@@ -88,12 +131,28 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
     @Override
     public void onMapReady(GoogleMap googleMap) {
         mMap = googleMap;
-        LatLng pos = new LatLng(37.503064, 126.947617);
-        mMap.moveCamera(CameraUpdateFactory.newLatLngZoom(pos, 16));
+
         mMap.setMinZoomPreference(14);
         mMap.setMaxZoomPreference(17);
 
         drawStation();
+
+        LocationManager locationManager = (LocationManager) getSystemService(Context.LOCATION_SERVICE);
+        if (ActivityCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION) != PackageManager.PERMISSION_GRANTED && ActivityCompat.checkSelfPermission(this, Manifest.permission.ACCESS_COARSE_LOCATION) != PackageManager.PERMISSION_GRANTED) {
+            // TODO: Consider calling
+            //    ActivityCompat#requestPermissions
+            // here to request the missing permissions, and then overriding
+            //   public void onRequestPermissionsResult(int requestCode, String[] permissions,
+            //                                          int[] grantResults)
+            // to handle the case where the user grants the permission. See the documentation
+            // for ActivityCompat#requestPermissions for more details.
+            return;
+        }
+        //Location loc_current = locationManager.getLastKnownLocation(LocationManager.GPS_PROVIDER);
+
+        //LatLng pos = new LatLng(loc_current.getLatitude(), loc_current.getLongitude());
+        LatLng pos = new LatLng(37.5666805, 126.9784147);
+        mMap.moveCamera(CameraUpdateFactory.newLatLngZoom(pos, 16));
 
         mMap.setOnPolylineClickListener(new GoogleMap.OnPolylineClickListener(){
             @Override
@@ -113,7 +172,6 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
             @Override
             public void onInfoWindowClick(@NonNull Marker marker) {
                 if(startMarker == null) {
-
                     startMarker = marker;
                 } else if(startMarker.equals(marker)) {
                     startMarker = null;
@@ -124,11 +182,6 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
                 }
 
                 if(startMarker != null && endMarker != null) {
-                    /*for(int i = 0; i < routePolyline.size(); i++) {
-                        for(int j = 0; j < routePolyline.get(i).size(); j++) {
-                            routePolyline.get(i).get(j).set
-                        }
-                    }*/
                     routePolyline = new ArrayList<>();
                     drawRoute(startMarker.getPosition(), endMarker.getPosition());
                     startMarker = null;
@@ -185,9 +238,9 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
                 double radian = Math.atan((direction.get(j + 1).getEle() - direction.get(j).getEle()) / dist);
                 double degree = Math.toDegrees(radian);
 
-                if(degree >= 6) {
+                if(degree >= redSlopeMin) {
                     routePolyline.get(i).add(mMap.addPolyline(new PolylineOptions().add(latlng1, latlng2).color(Color.RED).zIndex(i)));
-                } else if(degree >= 3){
+                } else if(degree >= yellowSlopeMin){
                     routePolyline.get(i).add(mMap.addPolyline(new PolylineOptions().add(latlng1, latlng2).color(Color.YELLOW).zIndex(i)));
                 } else {
                     routePolyline.get(i).add(mMap.addPolyline(new PolylineOptions().add(latlng1, latlng2).color(Color.GREEN).zIndex(i)));

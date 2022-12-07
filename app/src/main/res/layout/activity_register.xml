@@ -45,13 +45,14 @@
             android:layout_height="wrap_content"
             android:layout_marginLeft="25dp"
             android:text="이메일"
-            android:textSize="16dp" />
+            android:textSize="16dp"/>
 
         <EditText
             android:id="@+id/login_et_id"
             android:layout_width="170dp"
             android:layout_height="wrap_content"
-            android:layout_marginLeft="10dp" />
+            android:layout_marginLeft="10dp"
+            android:singleLine="true"/>
 
         <Button
             android:id="@+id/check_email_duplication"

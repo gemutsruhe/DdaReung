@@ -13,7 +13,9 @@ import java.io.InputStreamReader;
 import java.io.OutputStreamWriter;
 import java.net.HttpURLConnection;
 import java.net.URL;
+import java.sql.Array;
 import java.util.ArrayList;
+import java.util.Set;
 import java.util.concurrent.atomic.AtomicReference;
 
 public class Direction {
@@ -21,6 +23,7 @@ public class Direction {
     private ArrayList<Position> route;
     private double weight;
     public static ArrayList<Position> crossRoadList;
+    private static double initialDistance = Double.MAX_VALUE;
 
     Direction(ArrayList<Position> pointPos, ArrayList<Position> route, double weight){
         this.pointPos = pointPos;
@@ -42,40 +45,44 @@ public class Direction {
 
     public static ArrayList<Direction> getRoute(LatLng start, LatLng end) {
         ArrayList<Direction> route = new ArrayList<>();
+        ArrayList<Thread> getDirectionThread = new ArrayList<>();
+        Thread getDirectDirectionThread = new Thread() {
+            public void run(){
+                Direction direction = getDirectionAndInit(start, null, end, "cycling-regular");
+                if(direction != null) route.add(direction);
+                direction = getDirectionAndInit(start, null, end, "cycling-road");
+                if(direction != null) route.add(direction);
+            }
+        };
+        getDirectDirectionThread.start();
+        try {
+            getDirectDirectionThread.join();
+        } catch (InterruptedException e) {
+            e.printStackTrace();
+        }
 
         for(int i = 0; i < crossRoadList.size(); i++) {
             Position waypointPos = crossRoadList.get(i);
             LatLng waypoint = waypointPos.getLatLng();
-            if((Position.getDistance(start, end) * 1.3 >= Position.getDistance(start, waypoint) + Position.getDistance(end, waypoint)) && Math.min(Position.getDistance(start, waypoint), Position.getDistance(end, waypoint)) * 1.5 >= Math.max(Position.getDistance(start, waypoint), Position.getDistance(end, waypoint))) {
-                AtomicReference<ArrayList<Position>> atomicPosList = new AtomicReference<>();
-                Thread getPosList = new Thread() {
+            if((Position.getDistance(start, end) * 1.3 >= Position.getDistance(start, waypoint) + Position.getDistance(end, waypoint)) && Math.min(Position.getDistance(start, waypoint), Position.getDistance(end, waypoint)) * 2.0 >= Math.max(Position.getDistance(start, waypoint), Position.getDistance(end, waypoint))) {
+                Thread getWaypointDirectionThread = new Thread() {
                     public void run(){
-                        atomicPosList.set(getDirection(start, waypoint, end));
+                        Direction direction = getDirectionAndInit(start, waypoint, end, "cycling-regular");
+                        if(direction != null) route.add(direction);
+                        direction = getDirectionAndInit(start, waypoint, end, "cycling-road");
+                        if(direction != null) route.add(direction);
                     }
                 };
-                getPosList.start();
-                try {
-                    getPosList.join();
-                } catch (InterruptedException e) {
-                    e.printStackTrace();
-                }
-                ArrayList<Position> posList = atomicPosList.get();
-                ArrayList<Position> dividePosList = divideInterval(posList);
-                Thread thread = new Thread() {
-                    public void run(){
-                        setElevation(dividePosList);
-                    }
-                };
-                thread.start();
-                try {
-                    thread.join();
-                } catch (InterruptedException e) {
-                    e.printStackTrace();
-                }
+                getWaypointDirectionThread.start();
+                getDirectionThread.add(getWaypointDirectionThread);
+            }
+        }
 
-                double weight = calcWeight(dividePosList);
-
-                route.add(new Direction(posList, dividePosList, weight));
+        for(int i = 0; i < getDirectionThread.size(); i++) {
+            try {
+                getDirectionThread.get(i).join();
+            } catch (InterruptedException e) {
+                e.printStackTrace();
             }
         }
 
@@ -103,7 +110,7 @@ public class Direction {
 
                 route1.retainAll(route2);
 
-                if((double)route1.size() / route1Size >= 0.8 || (double)route1.size() / route2Size >= 0.8) {
+                if((double)route1.size() / route1Size >= 0.6 || (double)route1.size() / route2Size >= 0.6) {
                     if(route.get(i).getWeight() > route.get(j).getWeight()) {
                         route.remove(i);
                         i--;
@@ -121,11 +128,61 @@ public class Direction {
         return route;
     }
 
-    private static ArrayList<Position> getDirection(LatLng start, LatLng waypoint, LatLng end) { // openrouteservice의 api를 통해 경로를 가져온다(임시, 개선 예정)
+    private static ArrayList<Position> getDirection(LatLng start, LatLng end, String method) {
+        ArrayList<Position> posList = new ArrayList<>();
+        StringBuilder urlBuilder = new StringBuilder("https://api.openrouteservice.org/v2/directions/" + method + "?api_key=5b3ce3597851110001cf6248588bd0d801724a5f850d4ecb744064e4");
+        urlBuilder.append("&start=" + start.longitude + "," + start.latitude + "&end="+end.longitude + "," + end.latitude);
+        URL url;
+
+        try {
+            url = new URL(urlBuilder.toString());
+
+            HttpURLConnection conn = (HttpURLConnection)url.openConnection();
+            conn.setRequestMethod("GET");
+            conn.setRequestProperty("Content-Type", "application/json");
+
+            BufferedReader rd;
+            if(conn.getResponseCode() >= 200 && conn.getResponseCode() <= 300) {
+                rd = new BufferedReader(new InputStreamReader(conn.getInputStream(), "UTF-8"));
+            } else {
+                rd = new BufferedReader(new InputStreamReader(conn.getErrorStream()));
+            }
+
+            JSONParser jsonParser = new JSONParser();
+            JSONObject jsonObject = null;
+            try {
+                jsonObject = (JSONObject)jsonParser.parse(rd);
+            } catch (ParseException e) {
+                // TODO Auto-generated catch block
+                e.printStackTrace();
+            }
+
+            JSONObject features = (JSONObject)((JSONArray) jsonObject.get("features")).get(0);
+            JSONObject properties = (JSONObject) features.get("properties");
+            JSONObject summary = (JSONObject) properties.get("summary");
+            initialDistance = Double.parseDouble(summary.get("distance").toString());
+            JSONObject geometry = (JSONObject) features.get("geometry");
+            JSONArray coordinates = (JSONArray) geometry.get("coordinates");
+
+            for(int i = 0; i < coordinates.size(); i++) {
+                JSONArray temp = (JSONArray)coordinates.get(i);
+                posList.add(new Position(temp.get(1).toString(), temp.get(0).toString()));
+            }
+
+            rd.close();
+            conn.disconnect();
+        } catch (IOException e) {
+            // TODO Auto-generated catch block
+            e.printStackTrace();
+        }
+        return posList;
+    }
+
+    private static ArrayList<Position> getDirection(LatLng start, LatLng waypoint, LatLng end, String method) { // openrouteservice의 api를 통해 경로를 가져온다(임시, 개선 예정)
         ArrayList<Position> posList = new ArrayList<>();
 
         String coord = "[[" + start.longitude + "," + start.latitude + "],[" + waypoint.longitude + "," + waypoint.latitude + "],[" + end.longitude + "," + end.latitude + "]]";
-        StringBuilder urlBuilder = new StringBuilder("https://api.openrouteservice.org/v2/directions/cycling-regular?Authorization=5b3ce3597851110001cf6248588bd0d801724a5f850d4ecb744064e4");
+        StringBuilder urlBuilder = new StringBuilder("https://api.openrouteservice.org/v2/directions/" + method + "?Authorization=5b3ce3597851110001cf6248588bd0d801724a5f850d4ecb744064e4");
         URL url;
 
         try {
@@ -164,6 +221,12 @@ public class Direction {
             JSONArray routes = (JSONArray) jsonObject.get("routes");
             JSONObject objectTemp = (JSONObject)routes.get(0);
             JSONObject summary = (JSONObject)objectTemp.get("summary");
+            double distance = Double.parseDouble(summary.get("distance").toString());
+            if(distance > initialDistance * 1.5) {
+                rd.close();
+                conn.disconnect();
+                return posList;
+            }
             String geometry = objectTemp.get("geometry").toString();
             JSONArray decodedGeometry = decodeGeometry(geometry, false);
 
@@ -182,10 +245,55 @@ public class Direction {
         return posList;
     }
 
+    private static Direction getDirectionAndInit(LatLng start, LatLng waypoint, LatLng end, String method){
+        ArrayList<Position> posList;
+
+        AtomicReference<ArrayList<Position>> atomicInitialRegularPosList = new AtomicReference<>();
+        Thread initDirection = new Thread() {
+            public void run(){
+                ArrayList<Position> direction;
+                if(waypoint == null) {
+                    direction = getDirection(start, end, method);
+                } else {
+                    direction = getDirection(start, waypoint, end, method);
+                }
+                if(direction.size() != 0) {
+                    atomicInitialRegularPosList.set(direction);
+                }
+            }
+        };
+
+        initDirection.start();
+        try {
+            initDirection.join();
+        } catch (InterruptedException e) {
+            e.printStackTrace();
+        }
+
+        posList = atomicInitialRegularPosList.get();
+        ArrayList<Position> dividePosList = divideInterval(posList);
+        if(dividePosList == null || dividePosList.size() == 0) return null;
+        Thread initThread = new Thread() {
+            public void run(){
+                setElevation(dividePosList);
+            }
+        };
+        initThread.start();
+        try {
+            initThread.join();
+        } catch (InterruptedException e) {
+            e.printStackTrace();
+        }
+
+        double weight = calcWeight(dividePosList);
+
+        return new Direction(posList, dividePosList, weight);
+    }
+
     private static ArrayList<Position> divideInterval(ArrayList<Position> posList) { // Position Array를 15m(임시) 단위로 나누어 분할하여 ArrayList<Position>으로 return
 
         ArrayList<Position> dividePosList = new ArrayList<>();
-
+        if(posList == null || posList.size() == 0) return dividePosList;
         dividePosList.add(new Position(posList.get(0).getLatLng().latitude, posList.get(0).getLatLng().longitude));
 
         for(int i = 0; i < posList.size() - 1; i++) {
