@@ -3,6 +3,8 @@ package com.example.bikemap;
 import android.database.sqlite.SQLiteDatabase;
 import android.database.sqlite.SQLiteOpenHelper;
 
+import com.google.android.gms.maps.model.LatLng;
+
 import org.json.simple.JSONArray;
 import org.json.simple.JSONObject;
 import org.json.simple.parser.JSONParser;
@@ -66,7 +68,8 @@ public class DataProcess {
         return stationState;
     }
 
-    static void getPOI(String query){
+    static ArrayList<Place> getPOI(String query){
+        ArrayList<Place> placeList = new ArrayList<>();
         StringBuilder urlBuilder = new StringBuilder("https://apis.openapi.sk.com/tmap/pois?version=1&areaLLCode=11&appKey=l7xx3637c689feac4e4ea50f3f9cd11a09ef");
 
         try {
@@ -94,14 +97,16 @@ public class DataProcess {
                 // TODO Auto-generated catch block
                 e.printStackTrace();
             }
+            if(jsonObject == null) return null;
             JSONObject searchPoiInfo = (JSONObject)jsonObject.get("searchPoiInfo");
             JSONObject pois = (JSONObject)searchPoiInfo.get("pois");
             JSONArray poi = (JSONArray)pois.get("poi");
-            System.out.println("TEST : " + poi.size());
             String data;
             for(int i = 0; i < poi.size(); i++) {
                 JSONObject object = (JSONObject)poi.get(i);
-                System.out.println("TEST : " + object.get("name") + " " + object.get("frontLat") + " " + object.get("frontLon"));
+                Place place = new Place(object.get("name").toString(), new LatLng(Double.parseDouble(object.get("frontLat").toString()), Double.parseDouble(object.get("frontLon").toString())));
+                System.out.println("TEST : " + object.get("name").toString());
+                placeList.add(place);
             }
             rd.close();
             conn.disconnect();
@@ -109,5 +114,7 @@ public class DataProcess {
             // TODO Auto-generated catch block
             e.printStackTrace();
         }
+
+        return placeList;
     }
 }

@@ -219,6 +219,7 @@ public class Direction {
                 e.printStackTrace();
             }
             JSONArray routes = (JSONArray) jsonObject.get("routes");
+            if(routes == null) return posList;
             JSONObject objectTemp = (JSONObject)routes.get(0);
             JSONObject summary = (JSONObject)objectTemp.get("summary");
             double distance = Double.parseDouble(summary.get("distance").toString());

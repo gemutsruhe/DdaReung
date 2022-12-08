@@ -129,6 +129,8 @@ public class RegisterActivity extends AppCompatActivity {
                                         userInfo.put("nick-name",nickName);
                                         userInfo.put("YellowSlopeMinimum", 4);
                                         userInfo.put("RedSlopeMinimum", 8);
+                                        userInfo.put("point", 0);
+                                        userInfo.put("tiltCheck", true);
                                         writeUser(uid, userInfo);
 
                                         Intent intent = new Intent(RegisterActivity.this, LoginActivity.class);

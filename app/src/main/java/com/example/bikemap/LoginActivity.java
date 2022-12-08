@@ -9,6 +9,7 @@ import android.view.View;
 import android.widget.Button;
 import android.widget.CheckBox;
 import android.widget.EditText;
+import android.widget.TextView;
 import android.widget.Toast;
 
 import androidx.annotation.NonNull;
@@ -29,8 +30,8 @@ public class LoginActivity extends AppCompatActivity {
 
     private FirebaseAuth mAuth;
     private CheckBox autoLogin;
+    private AppCompatActivity thisActivity;
     @Override
-
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_login);
@@ -40,18 +41,21 @@ public class LoginActivity extends AppCompatActivity {
         EditText logViewPw = (EditText)findViewById(R.id.login_view_pw);
         autoLogin = (CheckBox)findViewById(R.id.auto_login_checkbox);
         Button doLoginBtn = (Button)findViewById(R.id.do_login_btn);
-
+        TextView regist = (TextView)findViewById(R.id.regist);
         mAuth = FirebaseAuth.getInstance();
 
         SharedPreferences auto = getSharedPreferences("autoLogin", Activity.MODE_PRIVATE);
         String userId = auto.getString("userEmail", null);
         String userPw = auto.getString("userPw", null);
 
+        thisActivity = this;
         if(userId != null && userPw != null){
             logViewEmail.setText(userId);
             logViewPw.setText(userPw);
+            autoLogin.setChecked(true);
             login(userId, userPw);
         }else{
+
             doLoginBtn.setOnClickListener(new View.OnClickListener(){
 
                 @Override
@@ -59,6 +63,14 @@ public class LoginActivity extends AppCompatActivity {
                     String inputEmail = logViewEmail.getText().toString().trim();
                     String inputPw = logViewPw.getText().toString().trim();
                     login(inputEmail, inputPw);
+                }
+            });
+            regist.setOnClickListener(new View.OnClickListener() {
+                @Override
+                public void onClick(View view) {
+                    Intent intent = new Intent(getApplicationContext(), RegisterActivity.class);
+                    startActivity(intent);
+                    thisActivity.finish();
                 }
             });
         }
@@ -71,23 +83,21 @@ public class LoginActivity extends AppCompatActivity {
                     public void onComplete(@NonNull Task<AuthResult> task) {
                         if (task.isSuccessful()) {
                             // Sign in success, update UI with the signed-in user's information
-                            if(autoLogin.isChecked()) {
+                            if(autoLogin.isChecked() && getSharedPreferences("autoLogin", Activity.MODE_PRIVATE).getString("userEmail", null) == null) {
                                 SharedPreferences auto = getSharedPreferences("autoLogin", Activity.MODE_PRIVATE);
                                 SharedPreferences.Editor loginEdit = auto.edit();
                                 loginEdit.putString("userEmail", inputEmail);
                                 loginEdit.putString("userPw", inputPw);
                                 loginEdit.commit();
                             }
-                            FirebaseUser user = mAuth.getCurrentUser();
-                            System.out.println("TEST : " + user.getUid());
-                            SharedPreferences uid = getSharedPreferences("uid", Activity.MODE_PRIVATE);
-                            SharedPreferences.Editor uidEdit = uid.edit();
-                            uidEdit.putString("uid", user.getUid());
-                            uidEdit.commit();
+                            SharedPreferences last = getSharedPreferences("lastLogin", Activity.MODE_PRIVATE);
+                            SharedPreferences.Editor lastLogin = last.edit();
+                            lastLogin.putString("userEmail", inputEmail);
+                            lastLogin.putString("userPw", inputPw);
+                            lastLogin.commit();
                             Intent intent = new Intent(LoginActivity.this, MapsActivity.class);
                             startActivity(intent);
-                            finish();
-                            Toast.makeText(LoginActivity.this, "로그인에 성공하셨습니다.", Toast.LENGTH_SHORT).show();
+                            thisActivity.finish();
                         } else {
                             // If sign in fails, display a message to the user.
                             Toast.makeText(LoginActivity.this, "Authentication failed.",

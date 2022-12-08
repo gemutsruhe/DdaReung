@@ -5,7 +5,7 @@
     xmlns:android="http://schemas.android.com/apk/res/android"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    tools:context=".TiltSetting">
+    tools:context=".TiltActivity">
 
 <!-- 경사도 체크 창 -->
     <LinearLayout
@@ -38,11 +38,12 @@
             tools:layout_editor_absoluteY="169dp"></TextView>
 
         <EditText
-            android:id="@+id/tilt_min"
+            android:id="@+id/yellow_tilt"
             android:layout_width="300dp"
             android:layout_height="wrap_content"
             android:layout_gravity="center"
             android:hint="최소 가능 경사도"
+            android:inputType="number"
             tools:layout_editor_absoluteX="55dp"
             tools:layout_editor_absoluteY="335dp"></EditText>
 
@@ -59,11 +60,12 @@
             tools:layout_editor_absoluteY="301dp"></TextView>
 
         <EditText
-            android:id="@+id/tilt_max"
+            android:id="@+id/red_tilt"
             android:layout_width="300dp"
             android:layout_height="wrap_content"
             android:layout_gravity="center"
             android:hint="최대 가능 경사도"
+            android:inputType="number"
             tools:layout_editor_absoluteX="55dp"
             tools:layout_editor_absoluteY="202dp"></EditText>
 

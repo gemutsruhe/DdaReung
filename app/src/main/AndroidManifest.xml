@@ -37,31 +37,35 @@
             android:value="AIzaSyD2Oj1rbxJ2Qlg68XUtMocdhTzMr__cW0Q" />
         <activity
             android:name=".LoginOrRegisterActivity"
-            android:exported="true" />
+            android:exported="true"/>
         <activity
             android:name=".RegisterActivity"
-            android:exported="true" />
+            android:exported="true"/>
         <activity
             android:name=".LoginActivity"
-            android:exported="true" />
+            android:exported="true"/>
         <activity
             android:name=".MainActivity"
-            android:exported="true"
-            android:theme="@style/Theme.BikeMap.NoActionBar"/>
+            android:exported="true"/>
         <activity
             android:name=".SplashActivity"
             android:exported="true">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
-
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
         </activity>
-        <activity android:name=".SignUpActivity"/>
+        <activity
+            android:name=".SignUpActivity"/>
         <activity
             android:name=".MapsActivity"
-            android:label="@string/title_activity_maps">
+            android:label="@string/title_activity_maps"
+            android:windowSoftInputMode="adjustPan">
         </activity>
+        <activity
+            android:name=".UserActivity"/>
+        <activity
+            android:name=".TiltActivity"/>
     </application>
 
 </manifest>

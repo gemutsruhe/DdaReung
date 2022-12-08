@@ -28,6 +28,7 @@
                 android:layout_gravity="center" />
         </androidx.appcompat.widget.Toolbar>
 
+
         <LinearLayout
             android:id="@+id/home_ly"
             android:layout_width="match_parent"

@@ -84,11 +84,6 @@ public class MainActivity extends AppCompatActivity {
                             .replace(R.id.home_ly, new MapFragment()).commit();
                     return true;
                 }
-                case R.id.navigation_user:{
-                    getSupportFragmentManager().beginTransaction()
-                            .replace(R.id.home_ly, new UserFragment()).commit();
-                    return true;
-                }
             }
             return false;
         }
