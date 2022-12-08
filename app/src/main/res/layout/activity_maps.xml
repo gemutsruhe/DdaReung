@@ -40,8 +40,7 @@
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 app:iconifiedByDefault="true"
-                app:queryHint="주소를 입력하세요"
-                android:background="#FFFFFF">
+                app:queryHint="주소를 입력하세요">
 
             </androidx.appcompat.widget.SearchView>
 
@@ -49,7 +48,8 @@
                 android:id="@+id/list_view"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                tools:ignore="MissingConstraints"/>
+                tools:ignore="MissingConstraints"
+                android:background="#FFFFFF"/>
 
         </LinearLayout>
 
